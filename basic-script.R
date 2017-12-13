@@ -32,6 +32,8 @@ for (i in 1:length(file_list)){
 
 ###Creating database
 
+#Note: I'm aware that I could have looped this, but I wanted to clean up the names.
+
 con<-DBI::dbConnect(RSQLite::SQLite(),path = ":memory:")
 dbWriteTable(con, "Accused", wdb_accused.csv)
 dbWriteTable(con, "Case", wdb_case.csv)
@@ -54,4 +56,12 @@ dbWriteTable(con, "WitchMeeting", wdb_witchesmeetingplace.csv)
 dbListTables(con)
 
 
-###
+###Dplyr manipulation
+
+accused_db <- tbl(con, "Accused")
+accused <- accused_db %>% collect()
+
+genderchart <- ggplot(data = accused,
+            mapping = aes(x = sex))
+genderchart + geom_bar()
+
