@@ -6,8 +6,11 @@
 
 library(tidyverse)
 library(dplyr)
-library(jsonlite)
-library(plyr)
+library(dbplyr)
+#library(plyr)
+#library(jsonlite)
+library(DBI)
+library(RSQLite)
 
 
 ###Downloading and extracting the data
@@ -25,6 +28,30 @@ for (i in 1:length(file_list)){
   )}
 
 #jsonData <- fromJSON("./history-scottish-witchcraft/datapackage.json")
+
+
+###Creating database
+
+con<-DBI::dbConnect(RSQLite::SQLite(),path = ":memory:")
+dbWriteTable(con, "Accused", wdb_accused.csv)
+dbWriteTable(con, "Case", wdb_case.csv)
+dbWriteTable(con, "CalendarCustom", wdb_calendarcustom.csv)
+dbWriteTable(con, "CounterStrategy", wdb_counterstrategy.csv)
+dbWriteTable(con, "DemonicPact", wdb_demonicpact.csv)
+dbWriteTable(con, "DevilAppear", wdb_devilappearance.csv)
+dbWriteTable(con, "ElfFairy", wdb_elf_fairyelements.csv)
+dbWriteTable(con, "Malice", wdb_malice.csv)
+dbWriteTable(con, "MusicalInst", wdb_musicalinstrument.csv)
+dbWriteTable(con, "OtherCharges", wdb_othercharges.csv)
+dbWriteTable(con, "Person", wdb_person.csv)
+dbWriteTable(con, "PropertyDamage", wdb_propertydamage.csv)
+dbWriteTable(con, "ReligiousMotif", wdb_religiousmotif.csv)
+dbWriteTable(con, "RitualObject", wdb_ritualobject.csv)
+dbWriteTable(con, "ShapeChange", wdb_shapechanging.csv)
+dbWriteTable(con, "WeatherMod", wdb_weathermodification.csv)
+dbWriteTable(con, "WhiteMagic", wdb_whitemagic.csv)
+dbWriteTable(con, "WitchMeeting", wdb_witchesmeetingplace.csv)
+dbListTables(con)
 
 
 ###
