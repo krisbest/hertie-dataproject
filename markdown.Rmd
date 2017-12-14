@@ -1,0 +1,58 @@
+---
+title: "Final Data Project - Data Management with R"
+author: "Kris Best"
+date: "15 December 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This project seeks to identify factors that contributed to individuals being found guilty of practicing witchcraft in early modern Scotland. It makes use of the *Scottish Witchcraft Database*, which was compiled by four researchers at the University of Edinburgh in 2003 and contains demographic and situational data on 3,219 individuals (both male and female) who were accused of witchcraft in Scotland between 1563 and 1736.
+
+........Use of regression analysis??????
+
+The public Github repository for this project can be found at: [https://github.com/krisbest/hertie-dataproject](https://github.com/krisbest/hertie-dataproject)
+
+
+## Data Preparation
+
+The data set was provided in a zipped file that contained 38 separate CSV files.
+Database files are organised at 3 levels: accused, case, trial. Include image?
+Unzipped and imported CSV files, turned into dataframes
+Created database
+Created local tibbles for data manipulation / graphs
+
+## Descriptive Statistics
+
+
+
+
+## Model Specification
+
+Sex, age, ethnic(?), marital, socioeconomic (RECODE-CAT), case date(??), primary
+
+
+## Results
+
+
+
+## References
+
+Julian Goodare, Lauren Martin, Joyce Miller and Louise Yeoman, *‘The Survey of Scottish Witchcraft’*, [www.arts.ed.ac.uk/witches/](www.arts.ed.ac.uk/witches/) (archived January 2003, accessed 13 December 2017).
+
+
+## Including Plots
+
+Embedded R code:
+```{r cars}
+summary(cars)
+```
+You can also embed plots, for example:
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
