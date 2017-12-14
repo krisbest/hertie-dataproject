@@ -49,8 +49,8 @@ for (i in 1:length(file_list)){
 wdb_accused <- wdb_accused.csv %>% 
   select(accusedref,firstname,lastname,sex,age,ethnic_origin,maritalstatus,
          socioecstatus,occupation) %>% 
-  mutate(sex_l = ifelse(sex=="Female",1,
-                        ifelse(sex=="Male",0,NA)))
+  mutate(female = ifelse(sex=="Female",TRUE,
+                        ifelse(sex=="Male",FALSE,NA)))
 #Fixing one irritating typo
 wdb_accused[2326,"maritalstatus"]=NA
 
@@ -76,8 +76,8 @@ wdb_trial <- wdb_trial.csv %>%
   select(trialref,caseref,female_accusers,male_accusers,high_status,verdict,
          sentence,execution,executionmethod) %>% 
   mutate(high_status = ifelse(high_status=="true",TRUE,FALSE),
-         execution = ifelse(execution=="true",TRUE,FALSE))
-
+         execution = ifelse(execution=="true",TRUE,FALSE),
+         guilty = ifelse(verdict=="Guilty",TRUE,FALSE))
 
 
 ###Creating database
@@ -90,6 +90,7 @@ dbWriteTable(con, "Accused", wdb_accused)
 dbWriteTable(con, "Case", wdb_case)
 dbWriteTable(con, "Trial", wdb_trial)
 dbListTables(con)
+
 
 
 ###Creating local tibbles
@@ -222,3 +223,20 @@ execmethod + geom_bar() + theme_classic() +
 
 ###Regression analysis
 
+#Generating Guilty dependent variable
+
+#Running model 1 - Guilty
+
+m1 <- glm(guilty ~ sex + age + maritalstatus + socioecstatus + high_status + 
+               malevolentmagic + goodmagic + political + property + neighbour + 
+               refusedcharity + other, family=binomial(link='logit'), data=fulldat)
+summary(m1)
+
+m2 <- glm(guilty ~ sex + age + maritalstatus + socioecstatus + high_status, 
+          family=binomial(link='logit'), data=fulldat)
+summary(m2)
+
+m3 <- lm(guilty ~ sex + age + maritalstatus + socioecstatus + high_status + 
+            malevolentmagic + goodmagic + political + property + neighbour + 
+            refusedcharity + other, data=fulldat)
+summary(m3)
