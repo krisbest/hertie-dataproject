@@ -3,7 +3,7 @@
 
 ###STILL TO DO:
 ##MERGE DATASETS
-##Work out NAs
+##Check out / in marital status
 ##Clean datasets of unwanted columns
 ##Create categorical variables
 ##Run actual regression
@@ -22,22 +22,22 @@
 
 ###Loading libraries 
 
-library(tidyverse)
-library(dplyr)
-library(dbplyr)
+#library(tidyverse)
+#library(dplyr)
+#library(dbplyr)
 #library(plyr)
 #library(jsonlite)
-library(DBI)
-library(RSQLite)
-library(knitr)
-library(RColorBrewer)
-library(wesanderson)
+#library(DBI)
+#library(RSQLite)
+#library(knitr)
+#library(RColorBrewer)
+#library(wesanderson)
 
 
 ###Downloading and extracting the data
 
-unzip(zipfile="./history-scottish-witchcraft.zip",
-      exdir=".")
+#unzip(zipfile="./history-scottish-witchcraft.zip",
+      #exdir=".")
 
 datafolder <- "./history-scottish-witchcraft/data/"
 
@@ -45,7 +45,7 @@ file_list <- list.files(path=datafolder, pattern="*.csv")
 
 for (i in 1:length(file_list)){
   assign(file_list[i], 
-         read.csv(paste(datafolder, file_list[i], sep=''))
+         read.csv(paste(datafolder, file_list[i], sep=''), na.strings="")
   )}
 
 #jsonData <- fromJSON("./history-scottish-witchcraft/datapackage.json")
@@ -76,7 +76,7 @@ trial <- trial_db %>% collect()
 ###Descriptive statistics - visualisations
 
 #Gender
-gendervis <- ggplot(data = accused,
+gendervis <- ggplot(data = na.omit(subset(accused, select = c(sex))),
             mapping = aes((x = sex), fill=factor(sex)))
 gendervis + geom_bar() + theme_classic() + 
   theme(axis.ticks = element_blank(), plot.title = element_text(hjust = -0.25)) +
@@ -96,14 +96,25 @@ agevis + geom_histogram(bins=30,fill=pal30) + theme_classic() +
        x="Age",
        y="Number of accused")
 
-#Marital#########FIX BY REMOVING NAs, THEME COLORS
-pal7 <- wes_palette(7, name = "GrandBudapest2", type = "continuous")
-maritalvis <- ggplot(data = accused,
-                 mapping = aes((x = maritalstatus), fill=factor(maritalstatus), rm.na=TRUE))
+#Marital#########FIX BY CHECKING /
+pal6 <- wes_palette(6, name = "GrandBudapest2", type = "continuous")
+maritalvis <- ggplot(data = na.omit(subset(accused, select = c(maritalstatus))),
+                 mapping = aes((x = maritalstatus), fill=factor(maritalstatus)))
 maritalvis + geom_bar() + theme_classic() + 
-  scale_fill_manual(values=pal7, guide=FALSE) +
+  scale_fill_manual(values=pal6, guide=FALSE) +
   theme(axis.ticks = element_blank(), plot.title = element_text(hjust = -0.35)) +
   labs(title="Distribution of the accused by marital status",
+       x="Marital status",
+       y="Number of accused")
+
+#Socioeconomic
+pal7 <- wes_palette(7, name = "GrandBudapest2", type = "continuous")
+maritalvis <- ggplot(data = na.omit(subset(accused, select = c(socioecstatus))),
+                     mapping = aes((x = socioecstatus), fill=factor(socioecstatus)))
+maritalvis + geom_bar() + theme_classic() + 
+  scale_fill_manual(values=pal7, guide=FALSE) +
+  theme(axis.ticks = element_blank(), plot.title = element_text(hjust = -0.7)) +
+  labs(title="Distribution of the accused by socioeconomic status",
        x="Marital status",
        y="Number of accused")
 
