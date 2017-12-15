@@ -1,12 +1,6 @@
 ########FINAL DATA PROJECT - DATA MANAGEMENT WITH R (Fall 2017)
 ####Kris Best
 
-###STILL TO DO:
-##Do regression visualisation
-##Type up report in markdown
-##Investigate shiny dashboard - if time
-
-
 
 ###Loading libraries 
 
@@ -22,6 +16,8 @@ library(stringr)
 library(arm) #install.packages("arm")
 library(devtools) #install.packages("devtools")
 library(easyGgplot2) #install_github("easyGgplot2", "kassambara")
+
+
 
 ###Downloading and extracting the data
 
@@ -85,8 +81,6 @@ wdb_trial <- wdb_trial.csv %>%
 
 
 
-
-
 ###Creating database
 
 #Note: I am not creating a database from all available datasets. Only the ones that I
@@ -137,8 +131,6 @@ fulldat$notenoughinfo <- as.logical(fulldat$notenoughinfo)
 fulldat$high_status <- as.logical(fulldat$high_status)
 fulldat$execution <- as.logical(fulldat$execution)
 fulldat$guilty <- as.logical(fulldat$guilty)
-
-
 
 
 ###Descriptive statistics - Demographics
@@ -352,7 +344,7 @@ m4 <- lm(execution ~ female + maritalstatus + association +
 summary(m4)
 
 #Plotting the coefficients of the logit models
-#coefplot(m1, xlim=c(-2, 20), col.pts="plum", intercept=TRUE) #Guilty
+#coefplot(m1, xlim=c(-4, 20), col.pts="plum", intercept=TRUE) #Guilty
 #coefplot(m3, add=TRUE, col.pts="slategray2", intercept=TRUE) #Executed
 
 #Plotting the coefficients of the linear probability models

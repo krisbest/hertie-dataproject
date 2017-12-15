@@ -3,17 +3,15 @@ title: "Final Data Project - Data Management with R"
 author: "Kris Best"
 date: "15 December 2017"
 output: pdf_document
-fig_width: 6cm
-fig_height: 4cm
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=6, fig.height=4)
 
 ```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-source("./base-script.R")
+```{r souce, echo=FALSE, warning=FALSE, message=FALSE}
+source("./kbest-base-script.R")
 ```
 
 ## Introduction
@@ -29,14 +27,14 @@ The public Github repository for this project can be found at: [https://github.c
 
 The *Scottish Witchcraft Database* is organised at three levels. The top *'accused'* level contains the characteristics of the individual accused persons and their family members, including brief demographic information where available. The second *'case'* level contains details regarding the case brought against the accused, e.g. the date and content of the accusations, number of accusers, and particular elements of witchcraft involved. The first and second level are linked by the key *accusedref*, which refers to the individual accused. The third *'trial'* level of the database contains information related to the trial process, including the proceedings and outcome. As an individual accused may have multiple trials, each observation at the third level is assigned a *trialref* and is linked to the second level of the database through the key *caseref*.
 
-###Data preparation
+###Preparing data and creating the database
 
 The original data was provided in a zipped file that contained 38 separate tables in CSV format. These tables were first unzipped and read into R as dataframes. These 38 dataframes were reviewed, and any tables and columns that were not useful for the analysis were dropped from future steps. Three tables were used going forward that correspond to the 'overview' tables used at each level of the database: *accused, case,* and *trial*.
 
 In addition to dropping unused tables and variables, some of the existing factor variables had to be recoded at this stage into simpler categories in order to make them more amenable for future stages of the analysis. For example, marital status and socioeconomic status were recoded from five and seven categories respectively into three categories each. More substantive recoding was undertaken for the indicator variables corresponding to the researchers' assessment of the *primary motive or characterisation* of the accusation of witchcraft.
 
-| Recoded motive | Description | Original motives (estimated by researchers) |
-| -------------- | ----------- | ---------------- |
+| Recoded motive | Description                | Original motives (estimated by researchers) |
+| -------------- | -------------------------- | ---------------- |
 | Association    | Individual was primarily accused for their association with another witch | Consulting a witch, being implicated by another accused witch |
 | Evil Magic    | Individual was primarily accused for engaging in 'evil' or malevolent forms of magic | Demonic elements, demonic possession, maleficium |
 | Good Magic    | Individual was primarily accused for engaging in 'good' forms of magic | Fairies, folk healing, white magic |
@@ -52,13 +50,13 @@ The joined dataset contained 3,594 observations on 3,219 individuals accused of 
 
 As expected from common stereotypes of witchhunts in early modern Europe, the gender balance of the accused individuals is highly skewed: 85% of the accused were female, with the counts by sex shown in the table below.
 
-```{r, echo=FALSE}
-table(accused$sex)
-```
+| Female      | Male        |
+| ----------- | ----------- |
+|        2702 |         468 |
 
 Age statistics were available from only 166 of the accused individuals and ranged from a minimum of 9 to a maximum of 100, with a mean age of 43. As the following figure shows, witchcraft accusations primarily affected those in their mid-20s or older, with a distinct peak in middle age. Note that the spike at precisely age 50 reflects the fact that many of the age statistics were estimations on the part of the researchers.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+```{r age, echo=FALSE, warning=FALSE, message=FALSE}
 pal30 <- wes_palette(30, name = "GrandBudapest2", type = "continuous")
 agevis <- ggplot(data = accused,
                 mapping = aes((x = age)))
@@ -73,7 +71,7 @@ agevis + geom_histogram(bins=30,fill=pal30) + theme_classic() +
 
 The following figures show the distribution of the accused individuals by marital status and socioeconomic status, where these statistics were available. Individuals accused of witchcraft were overwhelmingly married, with most hailing from the middle or lower classes.
 
-```{r, echo=FALSE}
+```{r maritalsociostatus, echo=FALSE}
 maritalvis <- ggplot(data = na.omit(subset(accused, select = c(maritalstatus))),
                  mapping = aes((x = maritalstatus), fill=factor(maritalstatus))) + geom_bar() +
   theme_classic() + 
@@ -89,7 +87,7 @@ sociovis <- ggplot(data = na.omit(subset(accused, select = c(socioecstatus))),
   geom_bar() + theme_classic() + 
   scale_fill_manual(values=wes_palette(n=3, name="GrandBudapest2"), guide=FALSE) +
   theme(axis.ticks = element_blank()) +
-  labs(title="Accused by socioeconomic status",
+  labs(title="By socioeconomic status",
        subtitle="Where known, observations = 362",
        x="",
        y="Number of accused")
@@ -101,7 +99,7 @@ ggplot2.multiplot(maritalvis,sociovis, cols=2)
 
 Individuals were accused of witchcraft for a variety of different reasons. The following figure shows the distribution of primary motives or characteristics of the accusations where this was known to or could be accurately estimated by the researchers (409 cases).
 
-```{r, echo=FALSE}
+```{r motivevis, echo=FALSE}
 motivevis <- ggplot(data = motive.df,
                    mapping = aes(x = motives, y = motivecounts, fill=factor(motives)))
 motivevis + geom_bar(stat="identity") + theme_classic() + 
@@ -117,7 +115,7 @@ As the figure above indicates, the most common characteristics of a witchcraft a
 
 The following figures show the ultimate verdict of the trial (where known) as well as whether or not the accused individual was executed as a result. Both figures are further broken down according to the sex of the accused individual.
 
-```{r, echo=FALSE}
+```{r verdictexecute, echo=FALSE}
 verdictvis2 <- ggplot(data = verdict_noNA,
                      mapping = aes((x = verdict), fill=factor(sex))) + 
   geom_bar() + theme_classic() + 
@@ -148,32 +146,38 @@ Of the 230 individuals who were executed, details about the method of execution 
 
 ## Model Specification
 
-Logit, linear probability model
+The regression analysis comprises two different regression models - a logistic model and a linear probability model (LPM) - each carried out for two different dependent variables for a total of four models. In both sets of models the dependent variable is a binary variable that relates to the outcome of the witchcraft case.
 
-Had to recode variables due to lack of variation/small sample size
-Checked size of non-NAs for each variable
+- The binary dependent variable *Guilty* is defined as 1 if the verdict was "Guilty" and 0 otherwise.
+
+- The binary dependent variable *Executed* is defined as 1 if the individual was executed and 0 otherwise.
+
+Although of course the coefficient interpretation and estimators vary significantly between the logistic and LPM models (with the logistic model using a maximum likelihood estimator and the LPM relying on ordinary least squares), the generic form of the model in both cases is the same and takes after the following:
+$$Guilty = \alpha + \beta_1 female + \beta_2 maritalstatus + \beta_3 association + \beta_4 evilmagic +  \beta_5 goodmagic + \beta_6 nonmagic + \epsilon$$
+Where marital status is a factor variable (default category = married) and female, association, evilmagic, goodmagic, and nonmagic are all indicator variables that take on values of 1 or 0.
+
+Various forms of the above model were tested and discarded due to lack of variation among the independent variables, including models that included other standard demographic variables such as age and socioeconomic status. Although the joined data set is very large (containing 3,594 observations), the number of observations that contain data on the dependent variables are much smaller, with only 299 observations containing verdict data.[^1] The data set also contains a very high number of missing values in variables related to demographic data or characteristics of the case. Very often, observations that contain data on the independent variables of interest do not contain verdict data and *vice versa*. Variables that were otherwise interesting but contained too many missing values (e.g. age, where 3,053 out of 3,219 observations at the accused level had missing values) were therefore dropped from the general model.
+
+The problem of low variation among the dependent variables in the model also led to the recoding of several factor or indicator variables as described in the section on data preparation above, in an attempt to consolidate the data into fewer but larger categories for analysis (e.g. recoding the 12 original accusation motives into 4 overarching categories of association, evil magic, good magic, and non-magic; recoding marital status from five into three categories).
+
+[^1]: Although the number of observations with valid entries in the execution variable was much larger at 3210 observations, only 230 observations contain a "TRUE" value. Combined with the large number of missing values in the other variables described above, this means that there is little variation among "TRUE" cases for the regression analysis to be able to disentangle potential significant effects.
 
 ## Model Results
 
-Table with all four models
-```{r, echo = F, warning = F, message=F, results = 'asis'}
+### Logistic model results
+
+The table below displays the output from the two logistic regression models, with the coefficients presented in the form of odds ratios.
+
+```{r logisticmodels, echo = F, warning = F, message=F, results = 'asis'}
 #Running model 1 - Found guilty, logit
 m1 <- glm(guilty ~ female + maritalstatus + association +
           evilmagic + goodmagic + nonmagic, family=binomial(link='logit'),
           data=guilty_noNA)
 
-#Running model 2 - Found guilty, linear probability model
-m2 <- lm(guilty ~ female + maritalstatus + association +
-            evilmagic + goodmagic + nonmagic, data=guilty_noNA)
-
 #Running model 3 - Executed, logit
 m3 <- glm(execution ~ female + maritalstatus + association +
             evilmagic + goodmagic + nonmagic, family=binomial(link='logit'),
           data=executed_noNA)
-
-#Running model 4 - Executed, linear probability model
-m4 <- lm(execution ~ female + maritalstatus + association +
-           evilmagic + goodmagic + nonmagic, data=executed_noNA)
 
 m1labels <- c("Female","Single","Widowed","Association","Evil Magic","Good Magic",
               "Non-Magic")
@@ -182,26 +186,57 @@ depvarlabels <- c("Guilty","Executed")
 stargazer::stargazer(m1, m3, apply.coef=exp, apply.se=exp, covariate.labels = m1labels, 
                      dep.var.labels = depvarlabels,
                      type = "latex", header = F, single.row = T, font.size = 'small')
+```  
+
+In the *Guilty* logistic model, only one coefficient, the female indicator variable, is found to be significant at the 5% level, suggesting that being a female accusee is associated with a nearly 6 times greater likelihood of being found guilty of witchcraft compared to their accused male counterparts. The evil magic and good magic coefficients took on rather extreme values in this model, but remain insignificant due to their even higher standard errors (too large to be displayed in the table).
+
+In the *Executed* logistic model, the evil magic, good magic, and non-magic coefficients are all significantly associated with higher likelihoods of execution. In particular, being accused of witchcraft for a non-magic-related motive (such as a neighbourhood dispute or political motive) appears to be associated with a greater likelihood of execution than being accused for reasons related to evil magic or good magic. However, as the following plot of the logistic regression coefficients shows, the difference between the non-magic and good/evil magic coefficients does not appear to be significant.
+
+Note that the coefficients in the plot below are shown in *log-odds*, not in odds ratios. The thicker lines represent the 50% confidence interval around the coefficient estimate while the thinner lines represent the 95% confidence interval. The *Guilty* model is shown in purple and the *Executed* model is shown in blue.
+
+```{r logisticcoefs, echo = F, warning = F, message=F, results = 'asis'}
+#Plotting the coefficients of the logit models
+varnames <- c("Constant","Female","Single","Widowed","Assoc","EvilMagic","GoodMagic","NonMagic")
+coefplot(m1, xlim=c(-4, 20), col.pts="plum", intercept=TRUE, main="Coefficient plots - Logistic regressions", varnames=varnames, cex.var=0.6) #Guilty
+coefplot(m3, add=TRUE, col.pts="slategray2", intercept=TRUE) #Executed
+```  
+
+### Linear probability model (LPM) results
+
+The following table presents the regression output of the two linear probability models.
+\newpage
+
+```{r LPM, echo = F, warning = F, message=F, results = 'asis'}
+#Running model 2 - Found guilty, linear probability model
+m2 <- lm(guilty ~ female + maritalstatus + association +
+            evilmagic + goodmagic + nonmagic, data=guilty_noNA)
+
+#Running model 4 - Executed, linear probability model
+m4 <- lm(execution ~ female + maritalstatus + association +
+           evilmagic + goodmagic + nonmagic, data=executed_noNA)
 
 stargazer::stargazer(m2, m4, covariate.labels = m1labels, type = "latex", 
                      dep.var.labels = depvarlabels,
                      header = F, single.row = T, font.size = 'small')
+```
 
-```  
+In the *Guilty* LPM, in contrast to the logistic regression, the female coefficient is no longer significant (although the effect remains positive). Significant and positive coefficients can now be found on the evil magic and good magic indicators. Interestingly, the magnitude of the estimated effects for good and evil magic are similiar, as both are associated with a roughly +0.30 increase in the probability of being found guilty of witchcraft.
 
-Coefplots for both sets
+In the *Executed* LPM, just as in the logistic regression, the coefficients on the evil magic, good magic, and non-magic indicators are all highly significant and positively associated with a higher probability of execution in the magnitude of about +0.20 (for evil and good magic) and +0.30 (for non-magic). This shows a similiar pattern to the results of the logistic model, in which non-magic motives for accusation were associated with a higher likelihood of execution than either evil magic or good magic. However, again similarly to the logistic model, the following coefficient plot indicates that this difference is potentially not significant (falling outside the 50% confidence intervals but within the 95% confidence intervals).
 
-```{r, echo=FALSE}
-#Plotting the coefficients of the logit models
-coefplot(m1, xlim=c(-2, 20), col.pts="plum", intercept=TRUE) #Guilty
-coefplot(m3, add=TRUE, col.pts="slategray2", intercept=TRUE) #Executed
+In the following figure, the orange lines represent the *Guilty* model and the blue lines represent the *Executed* model.
 
+```{r LPMcoefs, echo = F, warning = F, message=F, results = 'asis'}
 #Plotting the coefficients of the linear probability models
-coefplot(m2, xlim=c(-1, 1), col.pts="salmon",  intercept=TRUE) #Guilty
+coefplot(m2, xlim=c(-1, 1), col.pts="salmon",  intercept=TRUE, main="Coefficient plots - LPM", varnames=varnames, cex.var=0.6) #Guilty
 coefplot(m4, add=TRUE, col.pts="lightslateblue", intercept=TRUE) #Executed
 ```
 
-### Discussion 
+## Summary
+
+The results of the two *Guilty* models are inconclusive as to the factors that might lead an accused individual to be found guilty of witchcraft. While the logistic model suggests that being female might be positively associated with a higher likelihood of being found guilty of witchcraft with all else held equal, this result is not replicated in the parallel linear probability model.
+
+However, the logistic and LPM models for the *Executed* variable show remarkable consistency, suggesting that being accused on the basis of evil magic, good magic or non-magic-related motives are all associated with a significantly higher probability of execution. An interesting result is that while it appears to make no difference whether one is accused on the basis of practicing evil magic versus 'good' magic, being accused on the basis of non-magic-related motives in both models seems to result in an even higher probability of execution. However, the greater probability of execution associated with being accused for non-magic-related reasons does not appear to be statistically significant at a 95% confidence level.
 
 ## Data Source
 
