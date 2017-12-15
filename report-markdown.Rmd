@@ -3,56 +3,206 @@ title: "Final Data Project - Data Management with R"
 author: "Kris Best"
 date: "15 December 2017"
 output: pdf_document
+fig_width: 6cm
+fig_height: 4cm
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+source("./base-script.R")
 ```
 
 ## Introduction
 
-This project seeks to identify factors that contributed to individuals being found guilty of practicing witchcraft in early modern Scotland. It makes use of the *Scottish Witchcraft Database*, which was compiled by four researchers at the University of Edinburgh in 2003 and contains demographic and situational data on 3,219 individuals (both male and female) who were accused of witchcraft in Scotland between 1563 and 1736.
-
-........Use of regression analysis??????
+This project seeks to identify factors that contributed to individuals being found guilty of and/or being executed for practicing witchcraft in early modern Scotland. It makes use of the *Scottish Witchcraft Database*, which was compiled by four researchers at the University of Edinburgh in 2003 and contains demographic and situational data on the cases of 3,219 individuals (both male and female) who were accused and tried for witchcraft in Scotland between 1563 and 1736. This paper uses logit and linear probability regression models to investigate the probability that an individual would be found guilty of and ultimately executed for witchcraft as a function of their sex, marital status and the specific motives for their accusation.
 
 The public Github repository for this project can be found at: [https://github.com/krisbest/hertie-dataproject](https://github.com/krisbest/hertie-dataproject)
 
 
 ## Data Preparation
 
-The data set was provided in a zipped file that contained 38 separate CSV files.
-Database files are organised at 3 levels: accused, case, trial. Include image?
-Unzipped and imported CSV files, turned into dataframes
-Created database
-Created local tibbles for data manipulation / graphs
+###Structure of the dataset
+
+The *Scottish Witchcraft Database* is organised at three levels. The top *'accused'* level contains the characteristics of the individual accused persons and their family members, including brief demographic information where available. The second *'case'* level contains details regarding the case brought against the accused, e.g. the date and content of the accusations, number of accusers, and particular elements of witchcraft involved. The first and second level are linked by the key *accusedref*, which refers to the individual accused. The third *'trial'* level of the database contains information related to the trial process, including the proceedings and outcome. As an individual accused may have multiple trials, each observation at the third level is assigned a *trialref* and is linked to the second level of the database through the key *caseref*.
+
+###Data preparation
+
+The original data was provided in a zipped file that contained 38 separate tables in CSV format. These tables were first unzipped and read into R as dataframes. These 38 dataframes were reviewed, and any tables and columns that were not useful for the analysis were dropped from future steps. Three tables were used going forward that correspond to the 'overview' tables used at each level of the database: *accused, case,* and *trial*.
+
+In addition to dropping unused tables and variables, some of the existing factor variables had to be recoded at this stage into simpler categories in order to make them more amenable for future stages of the analysis. For example, marital status and socioeconomic status were recoded from five and seven categories respectively into three categories each. More substantive recoding was undertaken for the indicator variables corresponding to the researchers' assessment of the *primary motive or characterisation* of the accusation of witchcraft.
+
+| Recoded motive | Description | Original motives (estimated by researchers) |
+| -------------- | ----------- | ---------------- |
+| Association    | Individual was primarily accused for their association with another witch | Consulting a witch, being implicated by another accused witch |
+| Evil Magic    | Individual was primarily accused for engaging in 'evil' or malevolent forms of magic | Demonic elements, demonic possession, maleficium |
+| Good Magic    | Individual was primarily accused for engaging in 'good' forms of magic | Fairies, folk healing, white magic |
+| Non-Magic    | Individual was primarily accused for suspected non-magic-related reasons | Neighbourhood dispute, property motive, political motive, treason, refused charity |
+
+The three 'overview' tables were then imported into a SQLite database. The three tables were joined by a database query using the relevant keys at each level (*accusedref*,*caseref*) and then pulled into a set of tibbles for local use in R.
 
 ## Descriptive Statistics
 
+The joined dataset contained 3,594 observations on 3,219 individuals accused of witchcraft, with each observation corresponding to an accused individual and a trial. Some accused individuals were tried mutiple times and are therefore subject to multiple observations; in contrast, some accused individuals were not tried at all, and these observations relate only to the accusation. Note that dispute the high number of observations, only a small number (often a few hundred or less) actually contained detailed data on the variables of interest in this analysis.
 
+###Demographic statistics
+
+As expected from common stereotypes of witchhunts in early modern Europe, the gender balance of the accused individuals is highly skewed: 85% of the accused were female, with the counts by sex shown in the table below.
+
+```{r, echo=FALSE}
+table(accused$sex)
+```
+
+Age statistics were available from only 166 of the accused individuals and ranged from a minimum of 9 to a maximum of 100, with a mean age of 43. As the following figure shows, witchcraft accusations primarily affected those in their mid-20s or older, with a distinct peak in middle age. Note that the spike at precisely age 50 reflects the fact that many of the age statistics were estimations on the part of the researchers.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+pal30 <- wes_palette(30, name = "GrandBudapest2", type = "continuous")
+agevis <- ggplot(data = accused,
+                mapping = aes((x = age)))
+agevis + geom_histogram(bins=30,fill=pal30) + theme_classic() + 
+  scale_fill_manual(values=pal30) +
+  theme(axis.ticks = element_blank()) +
+  labs(title="Distribution of the accused by age",
+       subtitle="Where known, observations = 166",
+       x="",
+       y="Number of accused")
+```
+
+The following figures show the distribution of the accused individuals by marital status and socioeconomic status, where these statistics were available. Individuals accused of witchcraft were overwhelmingly married, with most hailing from the middle or lower classes.
+
+```{r, echo=FALSE}
+maritalvis <- ggplot(data = na.omit(subset(accused, select = c(maritalstatus))),
+                 mapping = aes((x = maritalstatus), fill=factor(maritalstatus))) + geom_bar() +
+  theme_classic() + 
+  scale_fill_manual(values=wes_palette(n=3, name="GrandBudapest2"), guide=FALSE) +
+  theme(axis.ticks = element_blank()) +
+  labs(title="Accused by marital status",
+       subtitle="Where known, observations = 736",
+       x="",
+       y="Number of accused")
+
+sociovis <- ggplot(data = na.omit(subset(accused, select = c(socioecstatus))),
+                     mapping = aes((x = socioecstatus), fill=factor(socioecstatus))) +
+  geom_bar() + theme_classic() + 
+  scale_fill_manual(values=wes_palette(n=3, name="GrandBudapest2"), guide=FALSE) +
+  theme(axis.ticks = element_blank()) +
+  labs(title="Accused by socioeconomic status",
+       subtitle="Where known, observations = 362",
+       x="",
+       y="Number of accused")
+
+ggplot2.multiplot(maritalvis,sociovis, cols=2)
+```
+ 
+### Descriptive statistics of the case and outcome
+
+Individuals were accused of witchcraft for a variety of different reasons. The following figure shows the distribution of primary motives or characteristics of the accusations where this was known to or could be accurately estimated by the researchers (409 cases).
+
+```{r, echo=FALSE}
+motivevis <- ggplot(data = motive.df,
+                   mapping = aes(x = motives, y = motivecounts, fill=factor(motives)))
+motivevis + geom_bar(stat="identity") + theme_classic() + 
+  scale_fill_manual(values=pal5, guide=FALSE) + 
+  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(title="Motives for accusation (as estimated by researchers)",
+       subtitle="Where known, observations = 409",
+       x="",
+       y="Number of cases")
+```
+
+As the figure above indicates, the most common characteristics of a witchcraft accusation related to the practice of 'evil' magic, i.e. to demonic possession, demonic activity, or maleficium (malevolent sorcery). However, 90 accusations were categorised by the researchers as having non-magic-related motives. Of the non-magic-related accusations, the researchers estimated that 65 related to a neighbourhood dispute and 10 related to 'refused charity', e.g. that the individual refused to share their food, shelter or wealth. Among the few cases that listed 'other' motives, the researchers listed the commission of crimes (notably murder and theft) as well as 'sexual misconduct', incest and rape. In the majority of cases (more than 3000), the primary motivation of the accusation could not be determined.
+
+The following figures show the ultimate verdict of the trial (where known) as well as whether or not the accused individual was executed as a result. Both figures are further broken down according to the sex of the accused individual.
+
+```{r, echo=FALSE}
+verdictvis2 <- ggplot(data = verdict_noNA,
+                     mapping = aes((x = verdict), fill=factor(sex))) + 
+  geom_bar() + theme_classic() + 
+  scale_fill_manual(values=wes_palette(n=2, name="GrandBudapest2"), guide=FALSE) +
+  theme(axis.ticks = element_blank()) +
+  labs(title="Verdict",
+       subtitle="Where known, observations = 299",
+       x="",
+       y="Number of cases")
+
+executevis <- ggplot(data = executed_noNA,
+                        mapping = aes((x = execution), fill=factor(sex))) + 
+  geom_bar() + theme_classic() + 
+  scale_fill_manual(values=wes_palette(n=2, name="GrandBudapest2"), name="Sex") +
+  theme(axis.ticks = element_blank()) +
+  labs(title="Executed",
+       subtitle="Where known, observations = 3210",
+       x="",
+       y="Number of cases")
+
+ggplot2.multiplot(verdictvis2,executevis, cols=2)
+```
+
+The accused individual was found guilty in 236 out of the 299 cases where verdict data exists, i.e. nearly 80% of the time. A total of 230 accused individuals were executed out of 3210 accused for which execution data exists. Note that this does not mean that almost all of the 236 individuals found guilty were executed: in many cases the data indicated that an execution took place where there was no corresponding data for the verdict (i.e. the verdict appeared as a missing value).
+
+Of the 230 individuals who were executed, details about the method of execution exist in 175 cases. The most common method of execution noted in 125 cases was 'strangle and burn', followed by burning alone in 46 cases. The remaining few execution cases are divided between beheadings (3) and hangings (1).
 
 
 ## Model Specification
 
-Sex, age, ethnic(?), marital, socioeconomic (RECODE-CAT), case date(??), primary
+Logit, linear probability model
 
+Had to recode variables due to lack of variation/small sample size
+Checked size of non-NAs for each variable
 
-## Results
+## Model Results
 
+Table with all four models
+```{r, echo = F, warning = F, message=F, results = 'asis'}
+#Running model 1 - Found guilty, logit
+m1 <- glm(guilty ~ female + maritalstatus + association +
+          evilmagic + goodmagic + nonmagic, family=binomial(link='logit'),
+          data=guilty_noNA)
 
+#Running model 2 - Found guilty, linear probability model
+m2 <- lm(guilty ~ female + maritalstatus + association +
+            evilmagic + goodmagic + nonmagic, data=guilty_noNA)
 
-## References
+#Running model 3 - Executed, logit
+m3 <- glm(execution ~ female + maritalstatus + association +
+            evilmagic + goodmagic + nonmagic, family=binomial(link='logit'),
+          data=executed_noNA)
+
+#Running model 4 - Executed, linear probability model
+m4 <- lm(execution ~ female + maritalstatus + association +
+           evilmagic + goodmagic + nonmagic, data=executed_noNA)
+
+m1labels <- c("Female","Single","Widowed","Association","Evil Magic","Good Magic",
+              "Non-Magic")
+depvarlabels <- c("Guilty","Executed")
+
+stargazer::stargazer(m1, m3, apply.coef=exp, apply.se=exp, covariate.labels = m1labels, 
+                     dep.var.labels = depvarlabels,
+                     type = "latex", header = F, single.row = T, font.size = 'small')
+
+stargazer::stargazer(m2, m4, covariate.labels = m1labels, type = "latex", 
+                     dep.var.labels = depvarlabels,
+                     header = F, single.row = T, font.size = 'small')
+
+```  
+
+Coefplots for both sets
+
+```{r, echo=FALSE}
+#Plotting the coefficients of the logit models
+coefplot(m1, xlim=c(-2, 20), col.pts="plum", intercept=TRUE) #Guilty
+coefplot(m3, add=TRUE, col.pts="slategray2", intercept=TRUE) #Executed
+
+#Plotting the coefficients of the linear probability models
+coefplot(m2, xlim=c(-1, 1), col.pts="salmon",  intercept=TRUE) #Guilty
+coefplot(m4, add=TRUE, col.pts="lightslateblue", intercept=TRUE) #Executed
+```
+
+### Discussion 
+
+## Data Source
 
 Julian Goodare, Lauren Martin, Joyce Miller and Louise Yeoman, *‘The Survey of Scottish Witchcraft’*, [www.arts.ed.ac.uk/witches/](www.arts.ed.ac.uk/witches/) (archived January 2003, accessed 13 December 2017).
-
-
-## Including Plots
-
-Embedded R code:
-```{r cars}
-summary(cars)
-```
-You can also embed plots, for example:
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

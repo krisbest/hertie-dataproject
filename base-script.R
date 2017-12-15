@@ -10,24 +10,23 @@
 
 ###Loading libraries 
 
-#library(tidyverse)
-#library(dplyr)
-#library(dbplyr)
-#library(DBI)
-#library(RSQLite)
-#library(knitr)
-#library(RColorBrewer)
-#library(wesanderson)
-#library(stargazer)
-#library(stringr)
-
-
-
+library(tidyverse)
+library(dplyr)
+library(dbplyr)
+library(DBI)
+library(RSQLite)
+library(knitr)
+library(wesanderson) #install.packages("wesanderson")
+library(stargazer)
+library(stringr)
+library(arm) #install.packages("arm")
+library(devtools) #install.packages("devtools")
+library(easyGgplot2) #install_github("easyGgplot2", "kassambara")
 
 ###Downloading and extracting the data
 
 #unzip(zipfile="./history-scottish-witchcraft.zip",
-      #exdir=".")
+#      exdir=".")
 
 datafolder <- "./history-scottish-witchcraft/data/"
 
@@ -44,7 +43,7 @@ for (i in 1:length(file_list)){
 ###Culling variables I don't want, creating new variables
 
 wdb_accused <- wdb_accused.csv %>% 
-  select(accusedref,firstname,lastname,sex,age,ethnic_origin,maritalstatus,
+  dplyr::select(accusedref,firstname,lastname,sex,age,ethnic_origin,maritalstatus,
          socioecstatus,occupation) %>% 
   mutate(female = ifelse(sex=="Female",TRUE,
                         ifelse(sex=="Male",FALSE,NA)),
@@ -56,7 +55,7 @@ wdb_accused <- wdb_accused.csv %>%
                                        ifelse(socioecstatus=="Upper"|socioecstatus=="Nobility/Chiefs"|socioecstatus=="Lairds/Baron","Upper",NA))))
 
 wdb_case <- wdb_case.csv %>% 
-  select(caseref,accusedref,case_date,age_at_case,ends_with("_p")) %>% 
+  dplyr::select(caseref,accusedref,case_date,age_at_case,ends_with("_p")) %>% 
     #Creating logical values, combining some categories
     #Note: midwifery_p and unorthodoxrelpract_p had no "true" values, therefore dropped
     mutate(association = ifelse(consulting_p=="true"|implicatedbyanother_p=="true"|implicatedbyanother_p=="true",
@@ -74,10 +73,10 @@ wdb_case <- wdb_case.csv %>%
            nonmagic = ifelse(political==TRUE|property==TRUE|neighbour==TRUE|refusedcharity==TRUE,TRUE,FALSE),
            other = ifelse(other_p=="true",TRUE,FALSE),
            notenoughinfo = ifelse(notenoughinfo_p=="true",TRUE,FALSE)) %>% 
-  select(-ends_with("_p"))
+  dplyr::select(-ends_with("_p"))
 
 wdb_trial <- wdb_trial.csv %>% 
-  select(trialref,caseref,female_accusers,male_accusers,high_status,verdict,
+  dplyr::select(trialref,caseref,female_accusers,male_accusers,high_status,verdict,
          sentence,execution,executionmethod) %>% 
   mutate(high_status = ifelse(high_status=="true",TRUE,FALSE),
          execution = ifelse(execution=="true",TRUE,FALSE),
@@ -348,6 +347,18 @@ summary(m3)
 exp(coefficients(m3))
 
 #Running model 4 - Executed, linear probability model
-m4 <- lm(guilty ~ female + maritalstatus + association +
+m4 <- lm(execution ~ female + maritalstatus + association +
            evilmagic + goodmagic + nonmagic, data=executed_noNA)
 summary(m4)
+
+#Plotting the coefficients of the logit models
+#coefplot(m1, xlim=c(-2, 20), col.pts="plum", intercept=TRUE) #Guilty
+#coefplot(m3, add=TRUE, col.pts="slategray2", intercept=TRUE) #Executed
+
+#Plotting the coefficients of the linear probability models
+#coefplot(m2, xlim=c(-1, 1), col.pts="salmon",  intercept=TRUE) #Guilty
+#coefplot(m4, add=TRUE, col.pts="lightslateblue", intercept=TRUE) #Executed
+
+
+
+#######Cheers! Thanks for the cool class!
